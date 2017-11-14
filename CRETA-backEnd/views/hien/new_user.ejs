@@ -1,0 +1,192 @@
+<html>
+	<head>
+		<title>CRETA</title>
+		<meta name="viewport" content="width=device-width">
+	</head>	
+	<style>
+
+		body{
+			background: #9E9E9E url("/static/hien/logo2.png") no-repeat;
+		}
+
+		form {
+			margin-left: 2cm;
+			position: sticky;
+			padding: 12px 20px;
+			color: rgb(0, 0, 0);
+			/* margin: auto; */
+			max-width: 500px;
+			border: 3px solid #353535;
+			border-radius: 5px;
+			background: rgb(136, 136, 136);
+		}		
+
+		input[type=text], input[type=password], input[type=date] {
+			width: 100% ;
+			padding: 12px 20px;
+			margin: 8px 0;
+			display: inline-block;
+			border: 1px solid #ccc;
+			box-sizing: border-box;
+		}
+
+		button {
+			background-color: #1D2424;
+			color: white;
+			padding: 14px 20px;
+			margin: 8px 0;
+			border: none;
+			border-radius: 5px; 
+			cursor: pointer;
+			max-width: 100%;
+		}
+
+		button:hover {
+			opacity: 0.8;
+		}
+
+		.info {
+    		padding: 16px;
+		}
+
+		img.logo {
+			width: 5%;
+			border-radius: 50%;
+		}
+
+		.missing{
+			color: #DA0000;
+		}
+
+		.header{
+			max-width:100%;
+			margin: auto;
+			position: -webkit-sticky;
+			position: sticky;
+			top:1;
+		}
+
+		.top{
+			font: 15px arial, sans-serif;
+			text-align: center;
+		}
+
+	</style>
+    <body>
+		<table class="header">
+			<tr>
+				<th><img src="/static/hien/logo.png" alt="creta" width="72" height="80"></th>
+				<th class="top" style="background-color : red"><a href="/hien/new_user"></a>Register</th>
+				<th class="top"><a href="/hien/manager">Manager</a></th>
+			</tr>
+		</table>
+		<!-- <h1 align="center">CRETA</h1> -->	
+		<form>
+			<a href="manager" class="url">Manager</a><br>
+			<div class="info">
+				<label><b>Name:</b></label>
+				<br>				
+				<input id="name" type = "text" name = "Name"><div class="missing" id="name-missing"></div>
+				<br>
+								
+				<label><b>Product:</b></label>
+				<br>
+					<input id="WF" type="radio" name="product" value="Wi-Farm" checked> Wi-Farm
+					<input id="WD" type="radio" name="product" value="Wi-Door">Wi-Door
+					<input id="test" type="radio" name="product" value="test">test 
+				<br>
+
+				<label><b>ID:</b></label><div id="ID"></div>
+				<button type="button" onclick="getID()" required>Get ID</button><br>
+				<div class="missing" id="ID-missing"></div>
+				<br>
+							
+				<label><b>Device:</b></label>
+				<br>
+				<input id="device" type = "text" name = "Device"><div class="missing" id="dev-missing"></div>
+				<!-- <button type="button" onclick="add()">+</button></th>                   -->
+				<br>
+
+				<label><b>LAN IP:</b></label>
+				<br>
+				<input id="lan" type = "text" name = "lan"><div class="missing" id="lan-missing"></div>
+				<br>
+
+				<label><b>WAN IP:</b></label>
+				<br>
+				<input id="wan" type = "text" name = "wan"><div class="missing" id="wan-missing"></div>
+				<br>
+
+				<button type="button" onclick="insert()">Insert</button>
+			</div>
+			<div id = "error-container" class="missing"></div>
+		</form>
+	</body>
+
+    <script src="/socket.io/socket.io.js"></script>
+	<script>
+		var socket = io();
+
+		function getID(){
+			var ran = Math.floor((Math.random() * 100000) + 1);
+			var radio = document.querySelector('input[name = "product"]:checked').id;				
+			document.getElementById('ID').innerHTML = radio +'-'+ ran 					
+		}
+
+		function insert(){
+			var i = 0;
+
+			var id = document.getElementById('ID').innerHTML
+			if (id == ""){
+				i = 1;
+				document.getElementById('ID-missing').innerHTML = '*Click "Get ID" button!'
+				document.getElementById('error-container').innerHTML = 'Some info is missing'
+			}
+
+			var product = document.querySelector('input[name = "product"]:checked').value
+			// var date = document.getElementById("date").value
+
+			var name = document.getElementById('name').value
+			if (name == ""){
+				i = 1;
+				document.getElementById('name-missing').innerHTML = '*Missing here'
+				document.getElementById('error-container').innerHTML = 'Some info is missing'
+			}
+
+			var device = document.getElementById('device').value
+			if (device == ""){
+				i = 1;
+				document.getElementById('dev-missing').innerHTML = '*Missing here'
+				document.getElementById('error-container').innerHTML = 'Some info is missing'
+			}
+
+			var lan = document.getElementById('lan').value
+			if (lan == ""){
+				i = 1;
+				document.getElementById('lan-missing').innerHTML = '*Missing here'
+				document.getElementById('error-container').innerHTML = 'Some info is missing'
+			}
+
+			var wan = document.getElementById('lan').value
+			if (wan == ""){
+				i = 1;
+				document.getElementById('wan-missing').innerHTML = '*Missing here'
+				document.getElementById('error-container').innerHTML = 'Some info is missing'
+			}
+			if(i == 0){
+				var info = {id:id, product:product,name:name,device:device,lan:lan,wan:wan}
+				socket.emit('insert',info)
+			}
+		}
+
+		// function add(){
+		// 		id:id,
+		// 		product:product,
+				
+		// 	}
+        //     i++
+        //     document.getElementById('device').innerHTML+='<td id="dev'+i+'"></td>'
+        //     document.getElementById('dev'+i).innerHTML = '<input id="device'+i.toString()+'" type = "text" name = "Device">'
+		// }
+	</script>
+</html>

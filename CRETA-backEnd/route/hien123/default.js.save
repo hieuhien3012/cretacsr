@@ -1,0 +1,311 @@
+/*************** Not configure **************/
+const user = 'hien123';
+var main = require('../../main.js');
+var app = main.app; 
+var io = main.io;
+var express = main.express; 
+main.updateViews('views/'+user);
+var mysql = require('mysql');
+var db
+var mqtt = require('mqtt')
+var client
+var error = require(main.PWD + '/route/black/errorLog.js');
+var arr = {};
+var bodyParser = require('body-parser');
+var urlencodedParser = bodyParser.urlencoded({ extended: false })
+/********************************************/
+
+/* ROUTE UPDATE WITH MAIN SERVER */
+var configureRoute = function(){
+
+    app.post('/hien123/setRules',urlencodedParser,function(req,res){
+        var data = req.body.data
+	var date = new Date();
+	console.log(date.getHours() +': '+ data)
+        var data = JSON.parse(data)
+        error.errorlog('hien',data)
+        if (data.sn != undefined && data.timeSet != undefined){
+            setRules(data);
+            res.send('{"status":"OK"}')
+        }
+        else{
+            res.send('{"status":"ERROR"}')
+        }
+    })
+
+    app.post('/hien123/getRules',urlencodedParser,function(req,res){
+	    var list = [];
+        var data = req.body.data
+        var data = JSON.parse(data)
+        var rules = function(info){
+            list.push(info)
+        }
+        json = getRules(data, rules)
+        res.send(list);
+    })
+
+    app.get('/hien123/tuan',function(req,res){
+//	data = JSON.parse(req.body)
+        console.log('content: '+req.body)
+        res.send('hello em')
+    })
+
+}
+
+var configureDB_MQTT = function(){
+
+    db = mysql.createConnection({
+      host: "192.168.1.198",
+      user: "creta",
+      password: "yoursolution",
+      database: "mydb"
+    });
+    db.connect(function(err) {
+        if (err) {error.errorlog('hien','Database not connect')};
+    });
+
+    client = mqtt.connect('tcp://iot.eclipse.org')
+    client.on('connect', function (connack){
+        client.on('message',function(topic,message){
+            error.errorlog('hien','MQTT topic: '+topic)
+            error.errorlog('hien','MQTT message: ' +message.toString())
+        });
+    });
+}
+
+var i = 0;
+var configureSocket = function(){
+    io.on('connection', function(socket){
+
+        var infoRules = function(data){
+            socket.emit('iR',data)
+        }
+
+        socket.on('manager',function(frame){
+            var func = frame.func;
+            var data = frame.data;
+            var json;
+
+            if (func == 'sR'){       // Func: setRules
+                console.log('setRules')
+                setRules(data)
+            }
+            else if( func == 'gR'){  // Func: getRules
+                console.log('getRules')
+                json = getRules(data, infoRules)
+            }
+            else if( func == 'dR'){  // Func: deleteRules
+                console.log('deleteRules')
+                deleteRules(data)
+            }
+            else if( func == 'cD'){
+                console.log('ctrlDev')
+                ctrlDev(data)
+            }
+        })
+
+/*        socket.on('control',function(data){
+            if (i == 0){
+                i=100
+            }
+            client.publish('server/esp000021','{"user":"hien123","func":"2","addr":"1","year":"0","mon":"0","day":"0","hour":"0","min":"0","data":"'+ i +'"}')
+            socket.emit('i',i)
+{sensor:data.sensor,timeSet:data.timeSet,senSet:data.senSet}
+        })*/
+        socket.on('showArr123',function(data){
+            socket.emit('iR',arr)
+        })
+
+        //Whenever someone disconnects this piece of code executed
+        socket.on('disconnect', function () {
+            // error.errorlog('hien','A user disconnected');
+        });
+
+    });
+}
+
+//Time control
+var timeControl = function(){ 
+    var dev = {};
+
+    db.query('SELECT * FROM timeRules',function(err,results){ //Query timeRules
+        if(err){error.errorlog('hien','[Query arr] ' +err)}
+        for (var i = 0; i < results.length; i++) {
+            var sn = results[i].sn;
+            dev[sn]=[];
+            var rules = JSON.parse(results[i].rules);
+            if(rules[0] != null){
+                for (var j = 0; j < rules.length; j++) {
+                    var data = {sn:sn,sensor:rules[j].sensor,timeSet:rules[j].timeSet,senSet:rules[j].senSet}
+                    arrPush(data)
+                }
+            }else{
+                var data = {sn:sn,sensor:rules.sensor,timeSet:rules.timeSet,senSet:rules.senSet}
+                arrPush(data)
+            }
+        }var infoRules = function(data){
+            socket.emit('iR',data)
+        }
+        error.errorlog('hien','[Arr push 1] '+ JSON.stringify(arr));
+    })
+
+    setInterval(function(){
+        var date = new Date();
+        for (var i in arr) {
+            var json = arr[i]
+            for (var j = 0; j < arr[i].length; j++) {
+		        var rules = json[j]
+                var sn = i
+                var sensor = rules.sensor
+
+                if (sensor == "" ) {
+                    var timeSet = rules.timeSet.split('-')
+                    var varsenSet = rules.senSet.split('-')
+                    var begin = parseInt(timeSet[0],10)*60 + parseInt(timeSet[1])
+                    var end = parseInt(timeSet[2],10)*60 + parseInt(timeSet[3])
+                    var sysTime = date.getHours()*60+date.getMinutes()
+                    var val = timeSet[4]
+                    if(sysTime >= begin && sysTime < end){
+                        if(dev[i][j] != '1'){
+                            var data = {ID:sn,FUNC:"Ctrl",ADDR:"1",DATA:val}
+                            data = JSON.stringify(data)
+                            client.publish(sn+'/master', data)
+                            console.log(date+': '+data)
+                            dev[i][j] = '1';
+                        }
+                    }else if(sysTime>=end){
+                        if (dev[i][j] != '0'){
+                            if (val == 'On'){
+                                val = 'Off';
+                            }else{
+                                val = 'On'
+                            }
+                            var data = {ID:sn,FUNC:"Ctrl",ADDR:"1",DATA:val}
+                            data = JSON.stringify(data)
+                            client.publish(sn+"/master", data)
+                            console.log(date+': '+data)
+                            dev[i][j] = '0'
+                        }
+                    }else{
+                        dev[i][j]='0'
+                    }
+                }
+    	    }
+        }
+    },500);
+}
+
+/* IF YOU WANT DEVEL ANOTHER ROUTE-STATIC FILE */
+var configurePublic = function(){
+ //   app.use('/static/' + user, express.static(main.PWD + '/public/' + user));
+}
+
+//Set Rules
+function setRules(data){
+    var ruleSet = {sensor:data.sensor,timeSet:data.timeSet,senSet:data.senSet}
+
+    db.query('SELECT rules FROM timeRules WHERE sn = ' + mysql.escape(data.sn),function(err,results){
+        if(err){error.errorlog('hien',err)}
+
+        if(results[0] == null){                 //Device non-existed
+            var rulesArr = [];
+            rulesArr.push(ruleSet)
+            var values = [[data.sn,JSON.stringify(rulesArr)]];
+            db.query('INSERT INTO timeRules (sn,rules) VALUES ?',[values],function(err,result){
+                if(err) {error.errorlog('hien','[ruleSet 2] '+err)};
+            })
+        }
+
+        else{                                   //Device existed
+            var x = 0;
+            var rules = JSON.parse(results[0].rules)
+
+            for (var i = 0; i < rules.length; i++) {
+                if(rules[i] == ruleSet){        //Rule existed
+                    x = 1;
+                }
+            }
+            if (x == 0){                        // Rule non-existed
+                rules.push(ruleSet)
+                rules = JSON.stringify(rules)
+                db.query("UPDATE timeRules SET rules = "+mysql.escape(rules)+" WHERE sn = "+mysql.escape(data.sn),function(err,results){
+                    if(err) {error.errorlog('hien','[ruleSet 2] '+err)};
+                })
+            }
+        }
+
+        if(data.sensor == ""){                  //Check sensor
+            arrPush(data);
+        }
+    })
+}
+
+// Get Rules
+function getRules(data, callback){
+    var json;
+    db.query("SELECT * FROM timeRules WHERE sn ="+mysql.escape(data.sn),function(err,results){
+        var info = results[0];
+        var rules = info.rules;
+        json = {sn:data.sn,rules:rules};
+        console.log(json);
+        callback(json);
+    })
+}
+
+//Delete rules
+function deleteRules(data){
+    var sn = data.sn
+    var json = timing(data)
+    var timeSet = json.timeSet
+    db.query("SELECT * FROM timeRules WHERE sn ="+mysql.escape(data.sn),function(err,results){
+        if (err) {error.errorlog('hien',err)}
+    })
+    for (var i = 0; i < arr[sn].length; i++) {
+        if (arr[sn][i].timeSet == timeSet){
+            arr[sn].splice(i,1);
+        }
+    }
+}
+
+function ctrlDev (data){
+    client.publish('server/'+data.sn,'{"user":"admin","func":"2","addr":"'+data.relay+'","year":"0","mon":"0","day":"0","hour":"0","min":"0","data":"'+data.val+'"}')
+}
+
+// Push array
+function arrPush(js){
+    var json = timing(js);
+    if(arr[js.sn] == null){
+        arr[js.sn]=[]
+    }
+    arr[js.sn].push(json);
+}
+
+
+function timing(js){
+    var timeSet = js.timeSet.split('-')
+    var time = parseInt(timeSet[0],'10')*60 + parseInt(timeSet[1])+parseInt(timeSet[3])
+    var hh = zero(Math.floor(time/60));
+    var mm = zero(time%60)
+    var val = timeSet[2]
+    var timeS = timeSet[0]+'-'+timeSet[1]+'-'+ hh.toString() +'-'+ mm.toString() +'-'+val
+    var json = {sensor:js.sensor,timeSet:timeS,senSet:js.senSet};
+    return json;
+}
+
+// Zero-int
+function zero(i){
+    if(i.toString().length == 1){
+        str = '0'+ i.toString();
+    }else{
+        str = i.toString()
+    }
+    return str;
+}
+
+exports.start = function(){
+    configurePublic();
+    configureRoute();
+    configureSocket();
+    configureDB_MQTT();
+    timeControl();
+}

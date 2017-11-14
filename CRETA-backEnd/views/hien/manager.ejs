@@ -1,0 +1,180 @@
+<html>
+	<head>
+		<title>CRETA</title>
+		<meta name="viewport" content="width=device-width">
+		<style>
+
+			fieldset {
+				max-width: 300px;
+				border: 3px solid #f1f1f1;
+			}		
+
+			input[type=text], input[type=password], input[type=date] {
+				width: 100% ;
+				padding: 12px 20px;
+				margin: 8px 0;
+				display: inline-block;
+				border: 1px solid #ccc;
+				box-sizing: border-box;
+			}
+
+			button {
+				background-color: #4CAF50;
+				color: white;
+				padding: 14px 20px;
+				margin: 8px 0;
+				border: none;
+				cursor: pointer;
+				max-width: 100%;
+			}
+
+			button:hover {
+				opacity: 0.8;
+			}
+
+			.container {
+				padding: 16px;
+				margin:  8px 0;
+			}
+
+			img.logo {
+				width: 40%;
+				border-radius: 50%;
+			}
+			
+			.table {
+			   font-family: arial, sans-serif;
+			   border-collapse: collapse;
+			   max-width: 100%;
+			}
+
+			th {
+			   border: 1px solid black;
+			   text-align: left;
+			   padding: 8px;
+			}
+
+			td:nth-child(odd) {
+			   background-color: #dddddd;
+			}
+
+			iframe{
+				width: 270px;
+				height: 330px
+			}
+		</style>
+	</head>
+	<body>
+		<h1 align="center">CRETA</h1>
+		<!-- <img src="logo.png" alt="logo.png" style="width: 277px;height: 312px"> -->
+		<a href="new_user">New User</a><br>
+		<form>
+		<fieldset>
+			<legend style="text-align: center;"><b>DEVICE MANAGER</b></legend><br>
+			<div class="container">
+				<b>Product:</b><br>
+				<input id="WF" type="radio" name="product" value="Wi-Farm" checked> Wi-Farm<br>
+				<input id="WD" type="radio" name="product" value="Wi-Door">Wi-Door<br>
+				<input id="test" type="radio" name="product" value="test">test<br> 
+		
+				<b>ID:</b><input id="ID" type = "text" name = "ID">
+				<button type="button" onclick="search()">Search</button><br>
+				<div id = "error-container"></div>
+			</div>
+		</fieldset>
+		</form>
+		<table>
+			<tr>
+				<td>
+					<table class="table">
+						<tr>
+							<th>Customer</th>
+						</tr>
+						<tr>
+							<th>Product</th>
+						</tr>
+						<tr>
+							<th>Device</th>
+						</tr>
+						<tr>
+							<th>Relay 1</th>
+						</tr>
+						<tr>
+							<th>Relay 2</th>
+						</tr>
+						<tr>
+							<th>Time</th>
+						</tr>
+						<tr>
+							<th>Brightness</th>
+						</tr>
+						<tr>
+							<th>Temperature</th>
+						</tr>
+						<tr>
+							<th>Humidity</th>
+						</tr>
+					</table>
+				</td>
+			<td><iframe src="login" name="iframe_a"></iframe></td>
+			</tr>
+		</table>
+				
+	</body>
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		var socket = io();
+
+		//Search by ID
+	   	function search() {
+			document.getElementById('error-container').innerHTML = ''
+			product = document.querySelector('input[ name = "product"]:checked').value;
+			id = document.getElementById('ID').value
+
+			socket.emit('search',{id:id,db:product})
+
+	   		noUser = setTimeout(function(){
+				document.getElementById('error-container').innerHTML = "Can't find user " + id
+			}, 4000);
+
+			socket.on('device',function(data){
+			 	if (data.id == id) {
+			 		clearTimeout(noUser);
+			 		document.getElementById('user').value = ''
+			 		document.getElementById('pass').value = ''
+			 	}
+			});
+		};
+		
+		// //Receive ID's device info
+	   	// socket.on('device', function(data){
+	   	// 	if (document.getElementById('mkh').innerHTML == data.user){
+		//     	if ( document.getElementById(data.device + '0') == null){
+		//     		var table = document.getElementById('table')
+		// 			var tr = document.createElement("tr");
+		// 			tr.setAttribute("id",data.device.toString())
+		// 			for (var i = 0; i < 7; i++){
+		// 				var td = document.createElement("td");
+		// 				td.setAttribute("id",data.device.toString() + i.toString() )
+		// 				tr.appendChild(td)
+		// 			}
+		// 			table.appendChild(tr)
+		// 		}
+
+		// 		document.getElementById(data.device + '0').innerHTML = data.device;
+		// 		document.getElementById(data.device + '3').innerHTML = data.time;
+		// 		document.getElementById(data.device + data.addr).innerHTML = data.data;			
+		// 		if((data.addr == 1) || (data.addr == 2)){
+		// 			//var topic = data.device
+		// 			document.getElementById(data.device + data.addr).innerHTML +='<br><button type="button" onclick = "Control(\''+data.device+'\','+data.addr+','+data.data+')">(!)</button>'
+		// 		}	   			
+	   	// 	}
+	   	// });
+
+	   	// function Control(a,i,j) {
+	   	// 	if (j==0) {j = 100} else {j = 0}
+	   	// 	socket.emit('control',{topic: a.toString(),relay: i, data : j} );
+		// }
+
+	</script>
+</html>

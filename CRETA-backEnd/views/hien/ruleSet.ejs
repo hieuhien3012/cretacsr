@@ -1,0 +1,154 @@
+<html>
+	<head>
+		<title>CRETA</title>
+		<meta name="viewport" content="width=device-width">
+	</head>	
+	<style>
+
+		body{
+			background: #9E9E9E url("/static/hien/logo2.png") no-repeat;
+		}
+
+		form {
+			margin-left: 2cm;
+			position: sticky;
+			padding: 12px 20px;
+			color: rgb(0, 0, 0);
+			/* margin: auto; */
+			max-width: 500px;
+			border: 3px solid #353535;
+			border-radius: 5px;
+			background: rgb(136, 136, 136);
+		}		
+
+		input[type=text], input[type=password], input[type=date] {
+			width: 100% ;
+			padding: 12px 20px;
+			margin: 8px 0;
+			display: inline-block;
+			border: 1px solid #ccc;
+			box-sizing: border-box;
+		}
+
+		button {
+			background-color: #1D2424;
+			color: white;
+			padding: 14px 20px;
+			margin: 8px 0;
+			border: none;
+			border-radius: 5px; 
+			cursor: pointer;
+			max-width: 100%;
+		}
+
+		button:hover {
+			opacity: 0.8;
+		}
+
+		.info {
+    		padding: 16px;
+		}
+
+		img.logo {
+			width: 5%;
+			border-radius: 50%;
+		}
+
+		.missing{
+			color: #DA0000;
+		}
+
+		.header{
+			max-width:100%;
+			margin: auto;
+			position: -webkit-sticky;
+			position: sticky;
+			top:1;
+		}
+
+		.top{
+			font: 15px arial, sans-serif;
+			text-align: center;
+		}
+
+	</style>
+    <body>
+		<table class="header">
+			<tr>
+				<th><img src="/static/hien/logo.png" alt="creta" width="72" height="80"></th>
+			</tr>
+		</table>
+		<!-- <h1 align="center">CRETA</h1> -->	
+		<form>
+			<div class="info">
+				<label><b>Device:</b></label>
+				<br>				
+				<input id="device" type = "text" name = "device"><div class="missing" id="dev-missing"></div>
+				<br>
+				
+				<label><b>Sensor:</b></label>
+				<input id="sensor" type = "text" name = "sensor"><div class="missing" id="sen-missing"></div>
+				<br>
+
+				<label><b>Set Time:</b></label>
+				<br>
+				<input id="timeSet" type = "text" name = "time"><div class="missing" id="time-missing"></div>
+				<br>
+
+				<label><b>Set Sensor:</b></label>
+				<br>
+				<input id="senSet" type = "text" name = "time"><div class="missing" id="time-missing"></div>
+				<br>
+
+				<button type="button" onclick="ruleSet()">Set Rules</button>
+				<button type="button" onclick="getRule()">Get Rules</button>
+				<button type="button" onclick="deleteRule()">Delete</button>
+				<button type="button" onclick="array()">Array</button>
+				<button type="button" onclick="insert()">Insert</button>
+			</div>
+			<div id = "error-container"></div><div id="label"></div>
+		</form>
+	</body>
+
+    <script src="/socket.io/socket.io.js"></script>
+	<script>
+		var socket = io();		
+
+		function ruleSet(){
+			device = document.getElementById('device').value;
+			sensor = document.getElementById('sensor').value;
+			timeSet = document.getElementById('timeSet').value;
+			senSet = document.getElementById('senSet').value;
+
+			var info = {device:device, sensor:sensor,timeSet:timeSet,senSet:senSet}
+			socket.emit('ruleSet',info)
+		}
+
+		function deleteRule(){
+			device = document.getElementById('device').value;
+			sensor = document.getElementById('sensor').value;
+			timeSet = document.getElementById('timeSet').value;
+			senSet = document.getElementById('senSet').value;
+
+			var info = {device:device, sensor:sensor,timeSet:timeSet,senSet:senSet}
+			socket.emit('deleteRule',info)
+		}
+
+		function getRule(){
+			dev = document.getElementById('device').value;
+			socket.emit('getRule123',dev)
+		}
+
+		socket.on('rules123',function(data){
+			document.getElementById('error-container').innerHTML = JSON.stringify(data)
+		})
+
+		socket.on('arr',function(data){
+			document.getElementById('error-container').innerHTML = data;
+		})
+		function array(){
+			// dev = document.getElementById('device').value;
+			socket.emit('array','info')
+		}
+	</script>
+</html>

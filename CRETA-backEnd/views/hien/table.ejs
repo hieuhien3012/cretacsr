@@ -1,0 +1,90 @@
+<html>
+    <head>
+        <title>CRETA</title>
+        <meta name="viewport" content="width=device-width">
+        <style>
+
+			table {
+			   font-family: arial, sans-serif;
+			   border-collapse: collapse;
+			   max-width: 100%;
+			}
+
+			th {
+			   border: 1px solid black;
+			   text-align: left;
+			   padding: 8px;
+			}
+
+			td:nth-child(odd) {
+			   background-color: #dddddd;
+			}
+
+			button {
+				background-color: #4CAF50;
+				color: white;
+				padding: 14px 20px;
+				margin: 8px 0;
+				border: none;
+				cursor: pointer;
+				max-width: 100%;
+			}
+
+			button:hover {
+				opacity: 0.8;
+			}
+
+        </style>
+    </head>
+    <body>
+        <div id="error-container"></div>
+    </body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io()
+        var all_table = document.createElement('table')
+
+        socket.on('subscribing',function(data){
+            document.getElementById('error-container').innerHTML='subscribe'
+            if ( document.getElementById(data.id.toString()) == null){
+                var table = document.createElement('table')
+                var tr = document.createElement('tr')
+                var th = document.createElement('th')
+                th.setAttribute("id",data.id.toString())
+                th.setAttribute("colspan",data.count.toString())
+                tr.appendChild(th)
+                table.appendChild(tr)
+                all_table.appendChild(table)
+                document.getElementById('id').innerHTML = data.id.toString()
+            }
+        })
+
+	   	socket.on('device', function(data){
+            if (document.getElementById(data.id.toString()) != null){
+                var table = document.getElementById(data.id.toString())
+                if ( document.getElementById(data.device.toString()) == null){
+                    for (var i = 0; i < 7; i++){
+                        var tr = document.createElement("tr");
+                        var td = document.createElement("td");
+                        td.setAttribute("id",data.device.toString() + i.toString() )
+                        tr.appendChild(td)
+                        table.appendChild(tr)
+                    }
+                }
+
+                document.getElementById(data.device + '0').innerHTML = data.device;
+                document.getElementById(data.device + '3').innerHTML = data.time;
+                document.getElementById(data.device + data.addr).innerHTML = data.data;			
+                if((data.addr == 1) || (data.addr == 2)){
+                    //var topic = data.device
+                    document.getElementById(data.device + data.addr).innerHTML +='<br><button type="button" onclick = "Control(\''+data.device+'\','+data.addr+','+data.data+')">(!)</button>'
+                }	   			
+            }
+        });
+        function Control(a,i,j) {
+	   		if (j==0) {j = 100} else {j = 0}
+	   		socket.emit('control',{topic: a.toString(),relay: i, data : j} );
+		}
+
+        
+    </script>

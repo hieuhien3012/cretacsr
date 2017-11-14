@@ -1,0 +1,85 @@
+<html>
+	<head>
+		<title>CRETA</title>
+		<meta name="viewport" content="width=device-width">
+	</head>	
+	<style>
+
+		body{
+			background-image: url("/static/hien/logo2.png");
+			background-color: #9C9A9A;
+		}
+
+		form {
+			width: 500px;
+			border: 3px solid #9C9A9A;
+			background-color: #97E0FD
+		}
+
+		input[type=text], input[type=password] {
+			width: 100%;
+			padding: 12px 20px;
+			margin: 8px 0;
+			display: inline-block;
+			border: 1px solid #ccc;
+			box-sizing: border-box;
+		}
+
+		button {
+			background-color: #47C1C5;
+			color: white;
+			padding: 14px 20px;
+			margin: 8px 0;
+			border: none;
+			cursor: pointer;
+			max-width: 100%;
+		}
+
+		.container {
+			padding: 16px;
+		}
+		
+	</style>
+
+	<body>
+		<!-- <h1 align="center">CRETA</h1> -->
+		<div id="logo"><img src="/static/hien/logo.png" alt="logo" height="100" width="100"></div>
+		<form>
+			<div class="container">
+				<label><b>Username:</b></label>
+				<br>
+				<input id="acc" type="text" placeholder="Enter Account" name="acc" required>
+				<br>
+
+				<label><b>Password</b></label>
+				<br>
+				<input id="pass" type="password" placeholder="Enter Password" name="pass" required>
+				<br>	
+
+				<!-- <button type="submit">Login</button> -->
+				<button type="button" onclick="login()">Login</button>
+			</div>
+			<div align="center" id = "error-container"></div>
+		</form>
+	</body>
+
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		var socket = io();
+
+	   	socket.on('wrong',function(data){
+	   		document.getElementById('error-container').innerHTML = data;
+	   	});
+
+	   	socket.on('correct',function(data){
+	   		window.location = data;
+	   	})
+		function login(){
+			document.getElementById('error-container').innerHTML = ''
+			socket.emit('checkListUsing',{ user : document.getElementById('acc').value , pass : document.getElementById('pass').value})
+			socket.on('listUsing',function(data){
+				document.getElementById('error-container').innerHTML=data.name;
+			})
+		}
+	</script>
+</html>
