@@ -27,14 +27,15 @@ var listDev = 'listDevice';
 var configureRoute = function () {
     app.post('/hien123/setRules', urlencodedParser, function (req, res) {
         var data = req.body.data
+        data = JSON.parse(data)        
         var OKAY = function () {
             res.send('{"status":"OK"}')
         }
         var ERROR = function () {
             res.send('{"status":"ERROR"}')
         }
-        data = JSON.parse(data)
-        console.log("setRules:"+ data)
+        console.log("#POST --setRules---")
+        console.log(data)
         uptCtrl();
         setRules(data, OKAY, ERROR);
     })
@@ -53,6 +54,8 @@ var configureRoute = function () {
     app.post('/hien123/getRules', urlencodedParser, function (req, res) {
         var data = req.body.data
         var data = JSON.parse(data)
+        console.log("#POST --getRules---")
+        console.log(data)
         var rules = function (info) {
             var list = info
             res.send({DATA:list});
@@ -74,12 +77,12 @@ var configureDB_MQTT = function () {
     tcp = mqtt.connect('tcp://cretacam.ddns.net', { port: 1889 })
     ws = mqtt.connect('ws://cretacam.ddns.net', { port: 1883 });
     tcp.on('connect', function (connack) {
-        console.log('MQTT-TCP CONNECTED!')
+        console.log('#MQTT-TCP CONNECTED!')
         tcp.subscribe('topicTest');
         x++;
     });
     ws.on('connect', function (connack) {
-        console.log('MQTT-WS CONNECTED!')
+        console.log('#MQTT-WS CONNECTED!')
         x++;
     });
     db = mysql.createConnection({
@@ -101,7 +104,7 @@ var configureDB_MQTT = function () {
                     var sn = results[i].SN;
                     devArr.push(sn)
                     tcp.subscribe(devArr[i] + '/slave');
-                    ws.subscribe(devArr[i] + '/master')
+                    ws.subscribe(devArr[i] + '/master');
                 }
             })
             clearInterval(interval)
@@ -321,7 +324,7 @@ function setRules(data, OKAY, ERROR) {
         [mac, acc, addr, begin, mode, state, time, du]
     ]
     var addRules = function (val) {
-        console.log('adding Rules')
+        console.log('# Adding new rules')
         db.query('INSERT INTO ' + ruleList + ' (MACID,ACC,ADDR,BEGIN,MODE,STATE,TIME,DU) VALUES ?', [val], function (err, result) {
             if (err) {
                 ERROR();
@@ -426,6 +429,7 @@ function uptCtrl() {
             }
             tCtrl.push(ru)
         }
+        console.log("# Rules:")
         console.log(tCtrl)
     })
 }
@@ -464,7 +468,9 @@ function tScan() {
                 check[i] = 0;
             }
             if (now >= ru.bTIME && now < ru.eTIME && check[i] != 1) {
-                console.log("TI_CONTROL 1: " + topic, JSON.stringify(js))
+                console.log("# TI_CONTROL 1:")
+                console.log("- Topic: " + topic)
+                console.log("- Frame: " + JSON.stringify(js))
                 tcp.publish(topic, JSON.stringify(js))
                 check[i] = 1
             }
@@ -472,7 +478,9 @@ function tScan() {
                 if (js.DATA == '1') {
                     js.DATA = '0'
                 } else { js.DATA = '1' }
-                console.log("TI_CONTROL 2: " + topic, JSON.stringify(js))
+                console.log("# TI_CONTROL 2:")
+                console.log("- Topic: " + topic)
+                console.log("- Frame: " + JSON.stringify(js))
                 tcp.publish(topic, JSON.stringify(js))
                 check[i] = 2
             }
@@ -493,7 +501,7 @@ function zero(i) {
 exports.start = function () {
     configurePublic();
     configureRoute();
-    configureSocket();
+    // configureSocket();
     configureDB_MQTT();
     timeControl();
 }

@@ -28,9 +28,11 @@ pass=1
 
 while [ : ]; do
 	echo "\n================================"
-	echo "[1]. Download source from server"
-	echo "[2]. Upload source to server"
-	echo "[3]. Install new package"
+	echo "[1]. [CRETA] Download source from server"
+	echo "[2]. [CRETA] Upload source to server"
+	echo "[3]. [CRETA] Install new package"
+	echo "[4]. [GIT] Upload source"
+	echo "[5]. [GIT] Reverse last update"	
 	echo "[q]. Exit"
 	echo "================================"
 	echo -n "Command > "
@@ -58,18 +60,24 @@ while [ : ]; do
 		json={\"user\":\"$user\",\"pass\":\"$pass\",\"cmd\":\"upload\"}
 		curl -H "Content-Type: application/json" -X POST -d "$json" http://$host:$port/devel
 
-		git add .
-		echo -n "\n# Update: "
-		read req
-		git commit -m "# Update: $req"
-		git push -u origin master
-
 #install package
 	elif [ $req = 3 ]; then
 		echo -n Package:
 		read package
 		json={\"user\":\"$user\",\"pass\":\"$pass\",\"cmd\":\"install\",\"dat\":\"$package\"}
 		curl -H "Content-Type: application/json" -X POST -d "$json" http://$host:$port/devel
+
+#GIT push
+	elif [ $req = 4 ]; then
+		git add .
+		echo -n "\n# Update: "
+		read req
+		git commit -m "# Update: $req"
+		git push -u origin master
+
+#Reverse
+	elif [ $req = 5 ]; then
+		git reset --hard
 
 #Exit program
 	elif [ $req = q ]; then
