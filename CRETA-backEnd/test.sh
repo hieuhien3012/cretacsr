@@ -75,7 +75,7 @@ while [ : ]; do
 		git commit -m "# Update: $req"
 		git push -u origin master
 
-#Reverse
+#GIT reverse
 	elif [ $req = 5 ]; then
 		git reset --hard
 

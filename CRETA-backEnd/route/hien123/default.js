@@ -54,7 +54,7 @@ var configureRoute = function () {
     app.post('/hien123/getRules', urlencodedParser, function (req, res) {
         var data = req.body.data
         var data = JSON.parse(data)
-        console.log("#POST --getRules---")
+        console.log("#POST ---getRules---")
         console.log(data)
         var rules = function (info) {
             var list = info
