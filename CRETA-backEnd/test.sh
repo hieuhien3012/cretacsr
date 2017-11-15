@@ -58,6 +58,12 @@ while [ : ]; do
 		json={\"user\":\"$user\",\"pass\":\"$pass\",\"cmd\":\"upload\"}
 		curl -H "Content-Type: application/json" -X POST -d "$json" http://$host:$port/devel
 
+		git add .
+		echo -n "\n# Update: "
+		read req
+		git commit -m "# Update: $req"
+		git push -u origin master
+
 #install package
 	elif [ $req = 3 ]; then
 		echo -n Package:

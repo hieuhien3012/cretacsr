@@ -33,8 +33,8 @@ var configureRoute = function () {
         var ERROR = function () {
             res.send('{"status":"ERROR"}')
         }
-        console.log(data)
         data = JSON.parse(data)
+        console.log("setRules:"+ data)
         uptCtrl();
         setRules(data, OKAY, ERROR);
     })
@@ -42,7 +42,7 @@ var configureRoute = function () {
     app.post('/hien123/getHistory', urlencodedParser, function (req, res) {
         var data = req.body.data;
         data = JSON.parse(data)
-        console.log(data)
+        console.log("History: "+data)
         var history = function (info) {
             var list = info;
             res.send({DATA:list})
@@ -53,7 +53,6 @@ var configureRoute = function () {
     app.post('/hien123/getRules', urlencodedParser, function (req, res) {
         var data = req.body.data
         var data = JSON.parse(data)
-        console.log("setRules: "+data.MACID+" "+data.toString())
         var rules = function (info) {
             var list = info
             res.send({DATA:list});
@@ -98,19 +97,11 @@ var configureDB_MQTT = function () {
         if (x == 3) {
             db.query("SELECT SN FROM " + listDev, function (err, results) {
                 if (err) throw (err);
-                var i                
-                for (i = 0; i < results.length; i++) {
+                for (var i = 0; i < results.length; i++) {
                     var sn = results[i].SN;
-                    devStatus[sn] = {}
-                    js1 = {USER:sn,FUNC:"002",ADDR:"0101",DATA:"OFF"}
-                    js2 = {USER:sn,FUNC:"002",ADDR:"0102",DATA:"OFF"}
-                    tcp.subscribe(sn + '/slave');
-                    tcp.publish(sn+"/master",js1)
-                    tcp.publish(sn+"/master",js2)
-                    ws.subscribe(sn + '/master');
-                }
-                if (i == results.length){
-                    setInterval(tScan,500)
+                    devArr.push(sn)
+                    tcp.subscribe(devArr[i] + '/slave');
+                    ws.subscribe(devArr[i] + '/master')
                 }
             })
             clearInterval(interval)
@@ -130,12 +121,7 @@ var configureDB_MQTT = function () {
                     db.query("INSERT INTO " + listDev + " (SN) VALUES ?", [values], function (err, results) {
                         if (err) throw (err);
                     })
-                    devStatus[msg] = {}    
-                    js1 = {USER:sn,FUNC:"002",ADDR:"0101",DATA:"OFF"}
-                    js2 = {USER:sn,FUNC:"002",ADDR:"0102",DATA:"OFF"}
-                    tcp.subscribe(msg + '/slave');
-                    tcp.publish(msg+"/master",js1)
-                    tcp.publish(msg+"/master",js2)                
+                    tcp.subscribe(msg + '/slave')
                     ws.subscribe(msg + '/master')
                 }
             })
@@ -223,7 +209,6 @@ var configureDB_MQTT = function () {
             }
 
             var js = { ID: id, FUNC: fu, ADDR: ad, DATA: da }
-            devStatus[id][ad]=da
             js = JSON.stringify(js)
             ws.publish(wsTopic, js)
         }
@@ -314,12 +299,16 @@ var configurePublic = function () {
 //Time control
 var timeControl = function () {
     uptCtrl();
+    // uptCheck();
     setInterval(uptCtrl, 1800000)
-    // tScan();
+    setInterval(tScan, 500)
 }
 
 //Set Rules;
 function setRules(data, OKAY, ERROR) {
+    db.query('DELETE FROM ' + ruleList + ' WHERE ADDR = '+mysql.escape(data.ADDR), function (err, result) {
+        if (err) throw (err)
+    })
     var mac = "CSR"+data.MACID;
     var acc = data.ACC;
     var addr = data.ADDR;
@@ -356,7 +345,6 @@ function setRules(data, OKAY, ERROR) {
                 && value.DU == data.DU
         })
         if (findValue == -1) {
-            console.log('else')
             addRules(values);
         } else {
             ERROR();
@@ -368,7 +356,7 @@ function setRules(data, OKAY, ERROR) {
 function getRules(data, callback) {
     var list = [];
     data.MACID = "CSR"+data.MACID
-    console.log(data.MACID)
+    console.log("getRules: "+data.MACID)
     db.query("SELECT * FROM " + ruleList + " WHERE MACID =" + mysql.escape(data.MACID), function (err, results) {
         for (var i = 0; i < results.length; i++) {
             var info = results[i];
@@ -413,7 +401,6 @@ function deleteRules(data) {
 
 //UPDATE TIME CONTROL ARRAY
 function uptCtrl() {
-    clearInterval(tScanInterval)
     tCtrl = []
     db.query('SELECT * FROM ' + ruleList, function (err, results) { //Query timeRules
         if (err) throw (err)
@@ -439,31 +426,10 @@ function uptCtrl() {
             }
             tCtrl.push(ru)
         }
+        console.log(tCtrl)
     })
 }
 
-//UPDATE check[]
-// function uptStatus() {
-//     var date = new Date();
-//     var now = (date.getHours() * 60 + date.getMinutes()) * 60000
-//     var i
-//     for (i = 0; i < tCtrl.length; i++) {
-//         var ru = tCtrl[i]
-//         if (now < ru.bTIME && check[i] != 0){
-//             check[i] = 0;
-//         }
-//         if (now >= ru.bTIME && now < ru.eTIME && check[i] != 1) {
-//             check[i] = 1
-//         }
-//         if (now >= ru.eTIME && check[i] != 2) {
-//             check[i] = 2
-//         }
-//     }
-//     if(i == tCtrl.length){
-//          console.log(check)
-//          tScanInterval = setInterval(tScan,500)
-//     }
-// }
 //TIME SCAN
 function tScan() {
 
@@ -475,10 +441,15 @@ function tScan() {
         var ru = tCtrl[i]
         var js = { USER: ru.MACID, FUNC: "001", ADDR: "01" + zero(ru.ADDR), DATA: ru.STATE }
         var topic = js.USER + "/master"
+        switch (ru.STATE) {
+            case "100":
+                js.DATA = "1"
+                break;
+        }
         //Check Mode
         switch (ru.MODE) {
             case "1":
-                if ((today - ru.bDAY) % ru.REP == 0) {
+                if ((today - ru.bDAY) % ru.REP == 0 || ru.REP == 0) {
                     tCompare();
                 }
                 break;
@@ -486,11 +457,7 @@ function tScan() {
 
                 break;
         }
-        switch (ru.STATE) {
-            case "100":
-                ru.STATE = "1"
-                break;
-        }
+        
         // Time compare
         function tCompare() {
             if (now < ru.bTIME) {
@@ -502,7 +469,7 @@ function tScan() {
                 check[i] = 1
             }
             if (now >= ru.eTIME && check[i] != 2) {
-                if (ru.STATE == '1') {
+                if (js.DATA == '1') {
                     js.DATA = '0'
                 } else { js.DATA = '1' }
                 console.log("TI_CONTROL 2: " + topic, JSON.stringify(js))
