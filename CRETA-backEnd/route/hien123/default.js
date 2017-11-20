@@ -27,14 +27,14 @@ var listDev = 'listDevice';
 var configureRoute = function () {
     app.post('/hien123/setRules', urlencodedParser, function (req, res) {
         var data = req.body.data
-        data = JSON.parse(data)        
+        data = JSON.parse(data)
         var OKAY = function () {
             res.send('{"status":"OK"}')
         }
         var ERROR = function () {
             res.send('{"status":"ERROR"}')
         }
-        console.log("#POST --setRules---")
+        console.log("#POST ---setRules---")
         console.log(data)
         uptCtrl();
         setRules(data, OKAY, ERROR);
@@ -43,10 +43,11 @@ var configureRoute = function () {
     app.post('/hien123/getHistory', urlencodedParser, function (req, res) {
         var data = req.body.data;
         data = JSON.parse(data)
-        console.log("History: "+data)
+        console.log("#POST ---getHistory---")
+        console.log(data)        
         var history = function (info) {
             var list = info;
-            res.send({DATA:list})
+            res.send({ DATA: list })
         }
         json = getHistory(data, history)
     })
@@ -58,7 +59,7 @@ var configureRoute = function () {
         console.log(data)
         var rules = function (info) {
             var list = info
-            res.send({DATA:list});
+            res.send({ DATA: list });
         }
         json = getRules(data, rules)
     })
@@ -113,7 +114,8 @@ var configureDB_MQTT = function () {
     var interval = setInterval(conCheck, 50)
 
     tcp.on('message', function (topic, msg) {
-        // console.log("TCP: " + msg.toString())
+        console.log("# TCP:")
+        console.log("   "+msg.toString())
         if (topic.toString() == 'topicTest') {
             db.query("SELECT * FROM " + listDev + " WHERE SN = " + mysql.escape(msg), function (err, results) {
                 if (err) throw (err);
@@ -218,7 +220,8 @@ var configureDB_MQTT = function () {
     })
     ws.on('message', function (topic, msg) {
 
-        // console.log("WS: " + msg.toString())
+        console.log("# WS:")
+        console.log("   "+msg.toString())
         msg = JSON.parse(msg)
         var tcpTopic = "CSR" + topic.split("ESP")[1]
         var user = tcpTopic.split("/master")[0]
@@ -255,37 +258,8 @@ var configureDB_MQTT = function () {
     });
 }
 
-var i = 0;
 var configureSocket = function () {
     io.on('connection', function (socket) {
-
-        var infoRules = function (data) {
-            socket.emit('iR', data)
-        }
-
-        socket.on('manager', function (frame) {
-            var func = frame.func;
-            var data = frame.data; asdfasd
-            var json;
-
-            if (func == 'sR') {       // Func: setRules
-                console.log('setRules')
-                setRules(data)
-            }
-            else if (func == 'gR') {  // Func: getRules
-                console.log('getRules')
-                json = getRules(data, infoRules)
-            }
-            else if (func == 'dR') {  // Func: deleteRules
-                console.log('deleteRules')
-                deleteRules(data)
-            }
-            else if (func == 'cD') {
-                console.log('ctrlDev')
-                ctrlDev(data)
-            }
-        })
-
         //Whenever someone disconnects this piece of code executed
         socket.on('disconnect', function () {
             // error.errorlog('hien','A user disconnected');
@@ -309,10 +283,10 @@ var timeControl = function () {
 
 //Set Rules;
 function setRules(data, OKAY, ERROR) {
-    db.query('DELETE FROM ' + ruleList + ' WHERE ADDR = '+mysql.escape(data.ADDR), function (err, result) {
+    db.query('DELETE FROM ' + ruleList + ' WHERE ADDR = ' + mysql.escape(data.ADDR), function (err, result) {
         if (err) throw (err)
     })
-    var mac = "CSR"+data.MACID;
+    var mac = "CSR" + data.MACID;
     var acc = data.ACC;
     var addr = data.ADDR;
     var begin = JSON.stringify(data.BEGIN);
@@ -329,9 +303,10 @@ function setRules(data, OKAY, ERROR) {
             if (err) {
                 ERROR();
                 throw (err)
-            };
-            OKAY();
-            uptCtrl();
+            } else {
+                OKAY();
+                uptCtrl();
+            }
         })
     }
     db.query('SELECT * FROM ' + ruleList + ' WHERE MACID = ' + mysql.escape(data.MACID), function (err, results) {
@@ -358,8 +333,8 @@ function setRules(data, OKAY, ERROR) {
 // Get Rules
 function getRules(data, callback) {
     var list = [];
-    data.MACID = "CSR"+data.MACID
-    console.log("getRules: "+data.MACID)
+    data.MACID = "CSR" + data.MACID
+    console.log("getRules: " + data.MACID)
     db.query("SELECT * FROM " + ruleList + " WHERE MACID =" + mysql.escape(data.MACID), function (err, results) {
         for (var i = 0; i < results.length; i++) {
             var info = results[i];
@@ -369,13 +344,14 @@ function getRules(data, callback) {
             }
             list.push(json);
         }
-        callback(list);            
+        callback(list);
     })
 }
 
 // Get History
 function getHistory(data, callback) {
     var list = [];
+    var addr = data.ADDR
     db.query("SELECT * FROM " + history + " WHERE SN =" + mysql.escape(data.MACID), function (err, results) {
         for (var i = 0; i < results.length; i++) {
             var info = results[i];
@@ -443,17 +419,18 @@ function tScan() {
     var now = (date.getHours() * 60 + date.getMinutes()) * 60000
     for (var i = 0; i < tCtrl.length; i++) {
         var ru = tCtrl[i]
-        var js = { USER: ru.MACID, FUNC: "001", ADDR: "01" + zero(ru.ADDR), DATA: ru.STATE }
-        var topic = js.USER + "/master"
         switch (ru.STATE) {
             case "100":
-                js.DATA = "1"
+                ru.STATE = "1"
                 break;
         }
+        var js = { USER: ru.MACID, FUNC: "001", ADDR: "01" + zero(ru.ADDR), DATA: ru.STATE }     
+        var topic = js.USER + "/master"
+        
         //Check Mode
         switch (ru.MODE) {
             case "1":
-                if ((today - ru.bDAY) % ru.REP == 0 || ru.REP == 0) {
+                if ((today - ru.bDAY) % ru.REP == 0 ) {
                     tCompare();
                 }
                 break;
@@ -461,7 +438,7 @@ function tScan() {
 
                 break;
         }
-        
+
         // Time compare
         function tCompare() {
             if (now < ru.bTIME) {

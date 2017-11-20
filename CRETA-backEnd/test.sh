@@ -55,7 +55,7 @@ while [ : ]; do
 	elif [ $req = 2 ]; then
 		tar czvf $user.tar public/$user views/$user route/$user
 		chmod 777 $user.tar
-		scp -P $portssh $user.tar creta@$host:~/application/storage 
+		scp -P $portssh $user.tar $ftpuser@$host:~/application/storage 
 		rm $user.tar
 		json={\"user\":\"$user\",\"pass\":\"$pass\",\"cmd\":\"upload\"}
 		curl -H "Content-Type: application/json" -X POST -d "$json" http://$host:$port/devel
